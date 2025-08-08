@@ -5,7 +5,8 @@ import { useState } from "react";
 import { UsersTable } from "./UsersTable";
 import { NewUserForm } from "./NewUserForm";
 
-type Row = { id: string; name: string | null; email: string; role: "ADMIN" | "USER" };
+type Row = { id: string; name: string | null; email: string; role: "ADMIN" | "MANAGER" | "DOCTOR" | "RECEPTION" };
+type Clinic = { id: string; name: string };
 
 export function UsersManager({ initialUsers, initialClinics, }: { initialUsers: Row[], initialClinics: Clinic[] }) {
     const router = useRouter();

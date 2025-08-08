@@ -8,7 +8,7 @@ type UserInput = {
     id?: string;
     name: string;
     email: string;
-    role: "ADMIN" | "USER";
+    role: "ADMIN" | "MANAGER" | "DOCTOR" | "RECEPTION";
     password?: string; // opcional em edição
 };
 
@@ -29,7 +29,7 @@ export function NewUserForm({
     const [form, setForm] = useState<UserInput & { clinicId?: string }>({
         name: "",
         email: "",
-        role: "USER",
+        role: "RECEPTION",
         password: "",
         clinicId: undefined,
     });
@@ -39,7 +39,7 @@ export function NewUserForm({
         if (initialData) {
             setForm({ name: initialData.name ?? "", email: initialData.email, role: initialData.role, password: "" });
         } else {
-            setForm({ name: "", email: "", role: "USER", password: "" });
+            setForm({ name: "", email: "", role: "RECEPTION", password: "" });
         }
     }, [initialData]);
 
@@ -82,7 +82,7 @@ export function NewUserForm({
 
             setWho(form.email);
             setShowSuccess(true);
-            if (!isEdit) setForm({ name: "", email: "", role: "USER", password: "" });
+            if (!isEdit) setForm({ name: "", email: "", role: "RECEPTION", password: "" });
         } catch (err: any) {
             setError(err?.message ?? "Erro ao salvar.");
         } finally {

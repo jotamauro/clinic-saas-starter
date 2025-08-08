@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 
-type Row = { id: string; name: string | null; email: string; role: "ADMIN" | "USER" };
+type Row = { id: string; name: string | null; email: string; role: "ADMIN" | "MANAGER" | "DOCTOR" | "RECEPTION" };
 
 const norm = (s: unknown) => (s ?? "").toString().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 const inc = (needle: string, hay: unknown) => norm(hay).includes(norm(needle));
