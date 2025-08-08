@@ -2,37 +2,44 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-// opcional: descomente para validar no client
-// import { slotSchema } from "@/schemas";
+import { contractSchema } from "@/schemas";
 import { CheckCircleIcon } from "@heroicons/react/24/solid"; // npm i @heroicons/react
 
 type Opt = { id: string; name: string };
 
-export function NewSlotForm({ doctors }: { doctors: Opt[] }) {
+export function NewContractForm({
+    clinics,
+    doctors,
+}: {
+    clinics: Opt[];
+    doctors: Opt[];
+}) {
     const router = useRouter();
-    const [formKey, setFormKey] = useState(0); // força reset do form
 
+    const [formKey, setFormKey] = useState(0); // força reset
     const [form, setForm] = useState({
+        clinicId: "",
         doctorId: "",
-        weekday: "",
-        startTime: "",
-        endTime: "",
-        durationMin: "",
+        startDate: "",
+        endDate: "",
+        revenueShare: "",
+        isActive: "true",
     });
 
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Modal de sucesso
     const [showSuccess, setShowSuccess] = useState(false);
-    const [createdInfo, setCreatedInfo] = useState<{ doctor?: string; summary?: string } | null>(null);
+    const [createdInfo, setCreatedInfo] = useState<{ clinic?: string; doctor?: string } | null>(null);
 
+    const clinicName = useMemo(
+        () => clinics.find(c => c.id === form.clinicId)?.name,
+        [clinics, form.clinicId]
+    );
     const doctorName = useMemo(
         () => doctors.find(d => d.id === form.doctorId)?.name,
         [doctors, form.doctorId]
     );
-
-    const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
     function onChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
         const { name, value } = e.target;
@@ -43,40 +50,49 @@ export function NewSlotForm({ doctors }: { doctors: Opt[] }) {
         e.preventDefault();
         setError(null);
 
+        // Normaliza tipos para validar/postar
         const payload = {
+            clinicId: form.clinicId,
             doctorId: form.doctorId,
-            weekday: Number(form.weekday),
-            startTime: form.startTime,
-            endTime: form.endTime,
-            durationMin: Number(form.durationMin || 0),
+            startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+            endDate: form.endDate ? new Date(form.endDate).toISOString() : null,
+            revenueShare: form.revenueShare ? Number(form.revenueShare) : 0,
+            isActive: form.isActive === "true",
         };
 
-        // Validação client-side (opcional)
-        // const parsed = slotSchema.safeParse(payload);
-        // if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Verifique os campos."); return; }
+        // Validação client-side (evita 400 desnecessário)
+        const parsed = contractSchema.safeParse(payload);
+        if (!parsed.success) {
+            setError(parsed.error.issues?.[0]?.message ?? "Verifique os campos do contrato.");
+            return;
+        }
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/slots", {
+            const res = await fetch("/api/contracts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload), // ou JSON.stringify(parsed.data)
+                body: JSON.stringify(parsed.data),
             });
             if (!res.ok) {
                 const txt = await res.text().catch(() => "");
                 let msg = txt;
                 try { msg = JSON.parse(txt)?.error ?? txt; } catch { }
-                throw new Error(msg || `Erro ao criar slot: ${res.status}`);
+                throw new Error(msg || `Erro ao criar contrato: ${res.status}`);
             }
 
-            // sucesso → mostra modal + limpa form
-            setCreatedInfo({
-                doctor: doctorName,
-                summary: `${weekdays[payload.weekday]} • ${payload.startTime}–${payload.endTime} • ${payload.durationMin}min`,
-            });
+            // Sucesso → mostra modal + limpa form
+            setCreatedInfo({ clinic: clinicName, doctor: doctorName });
             setShowSuccess(true);
             setFormKey(k => k + 1);
-            setForm({ doctorId: "", weekday: "", startTime: "", endTime: "", durationMin: "" });
+            setForm({
+                clinicId: "",
+                doctorId: "",
+                startDate: "",
+                endDate: "",
+                revenueShare: "",
+                isActive: "true",
+            });
         } catch (err: any) {
             setError(err?.message ?? "Erro ao salvar.");
         } finally {
@@ -86,12 +102,26 @@ export function NewSlotForm({ doctors }: { doctors: Opt[] }) {
 
     function closeAndRefresh() {
         setShowSuccess(false);
-        router.refresh(); // atualiza a listagem de slots
+        router.refresh(); // atualiza a listagem abaixo
     }
 
     return (
         <>
             <form key={formKey} onSubmit={onSubmit} className="grid gap-3">
+                <div className="grid gap-1">
+                    <label className="text-sm">Clínica</label>
+                    <select
+                        name="clinicId"
+                        value={form.clinicId}
+                        onChange={onChange}
+                        className="rounded border px-3 py-2"
+                        required
+                    >
+                        <option value="">Selecione uma clínica</option>
+                        {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                </div>
+
                 <div className="grid gap-1">
                     <label className="text-sm">Médico</label>
                     <select
@@ -107,53 +137,51 @@ export function NewSlotForm({ doctors }: { doctors: Opt[] }) {
                 </div>
 
                 <div className="grid gap-1">
-                    <label className="text-sm">Dia da semana</label>
+                    <label className="text-sm">Início</label>
+                    <input
+                        type="datetime-local"
+                        name="startDate"
+                        value={form.startDate}
+                        onChange={onChange}
+                        className="rounded border px-3 py-2"
+                        required
+                    />
+                </div>
+
+                <div className="grid gap-1">
+                    <label className="text-sm">Fim (opcional)</label>
+                    <input
+                        type="datetime-local"
+                        name="endDate"
+                        value={form.endDate}
+                        onChange={onChange}
+                        className="rounded border px-3 py-2"
+                    />
+                </div>
+
+                <div className="grid gap-1">
+                    <label className="text-sm">Repasse (0..1)</label>
+                    <input
+                        name="revenueShare"
+                        value={form.revenueShare}
+                        onChange={onChange}
+                        placeholder="ex: 0.6"
+                        className="rounded border px-3 py-2"
+                        required
+                    />
+                </div>
+
+                <div className="grid gap-1">
+                    <label className="text-sm">Ativo</label>
                     <select
-                        name="weekday"
-                        value={form.weekday}
+                        name="isActive"
+                        value={form.isActive}
                         onChange={onChange}
                         className="rounded border px-3 py-2"
-                        required
                     >
-                        <option value="">Selecione o dia</option>
-                        {weekdays.map((w, i) => <option key={i} value={i}>{w}</option>)}
+                        <option value="true">Sim</option>
+                        <option value="false">Não</option>
                     </select>
-                </div>
-
-                <div className="grid gap-1">
-                    <label className="text-sm">Início (HH:mm)</label>
-                    <input
-                        name="startTime"
-                        value={form.startTime}
-                        onChange={onChange}
-                        placeholder="08:00"
-                        className="rounded border px-3 py-2"
-                        required
-                    />
-                </div>
-
-                <div className="grid gap-1">
-                    <label className="text-sm">Fim (HH:mm)</label>
-                    <input
-                        name="endTime"
-                        value={form.endTime}
-                        onChange={onChange}
-                        placeholder="12:00"
-                        className="rounded border px-3 py-2"
-                        required
-                    />
-                </div>
-
-                <div className="grid gap-1">
-                    <label className="text-sm">Duração (min)</label>
-                    <input
-                        name="durationMin"
-                        value={form.durationMin}
-                        onChange={onChange}
-                        placeholder="30"
-                        className="rounded border px-3 py-2"
-                        required
-                    />
                 </div>
 
                 {error && <p className="text-sm text-red-600">{error}</p>}
@@ -177,13 +205,13 @@ export function NewSlotForm({ doctors }: { doctors: Opt[] }) {
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm text-center shadow-lg">
                         <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
                         <h2 className="text-lg font-semibold text-gray-800">
-                            Agenda cadastrada com sucesso!
+                            Contrato cadastrado com sucesso!
                         </h2>
-                        {(createdInfo?.doctor || createdInfo?.summary) && (
+                        {(createdInfo?.clinic || createdInfo?.doctor) && (
                             <p className="mt-1 text-sm text-gray-600">
+                                {createdInfo?.clinic && <span className="font-medium">{createdInfo.clinic}</span>}
+                                {createdInfo?.clinic && createdInfo?.doctor && " • "}
                                 {createdInfo?.doctor && <span className="font-medium">{createdInfo.doctor}</span>}
-                                {createdInfo?.doctor && createdInfo?.summary && " • "}
-                                {createdInfo?.summary}
                             </p>
                         )}
                         <button

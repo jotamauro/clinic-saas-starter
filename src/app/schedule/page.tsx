@@ -1,50 +1,50 @@
 // src/app/schedule/page.tsx
+import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/Card";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
-import { headers } from "next/headers";
 import { NewSlotForm } from "./NewSlotForm";
-
-async function getJSON(path: string) {
-  const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const cookie = headers().get("cookie") ?? "";
-  const res = await fetch(`${base}${path}`, { cache: "no-store", headers: { cookie } });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`GET ${path} -> ${res.status} ${txt}`);
-  }
-  return res.json();
-}
-
-async function getSlots() {
-  return getJSON("/api/slots");
-}
+import { SlotsTable } from "./SlotsTable";
 
 export default async function SchedulePage() {
-  const slots = await getSlots();
-  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const [slots, doctors] = await Promise.all([
+    prisma.slot.findMany({
+      orderBy: [{ weekday: "asc" }, { startTime: "asc" }],
+      select: {
+        id: true,
+        weekday: true,
+        startTime: true,
+        endTime: true,
+        durationMin: true,
+        doctor: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.doctor.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  const rows = slots.map((s) => ({
+    id: s.id,
+    doctorId: s.doctor?.id ?? "",
+    doctorName: s.doctor?.name ?? "",
+    weekday: s.weekday,            // 0..6
+    startTime: s.startTime,        // "HH:mm"
+    endTime: s.endTime,            // "HH:mm"
+    durationMin: s.durationMin,    // number
+  }));
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6">
+      {/* Formulário em cima */}
       <Card>
         <CardTitle>Novo Slot (Disponibilidade)</CardTitle>
-        <NewSlotForm />
+        <NewSlotForm doctors={doctors} />
       </Card>
 
+      {/* Lista embaixo com filtros */}
       <Card>
         <CardTitle>Agenda Base</CardTitle>
-        <Table>
-          <THead><TR><TH>Médico</TH><TH>Dia</TH><TH>Janela</TH><TH>Duração</TH></TR></THead>
-          <TBody>
-            {slots.map((s: any) => (
-              <TR key={s.id}>
-                <TD title={s.doctor?.id}>{s.doctor?.name ?? "-"}</TD>
-                <TD>{weekdays[s.weekday] ?? s.weekday}</TD>
-                <TD>{s.startTime}–{s.endTime}</TD>
-                <TD>{s.durationMin} min</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
+        <SlotsTable data={rows} />
       </Card>
     </div>
   );
