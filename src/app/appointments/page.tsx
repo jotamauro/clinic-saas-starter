@@ -1,15 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/Card";
-import { NewAppointmentForm } from "./NewAppointmentForm";
-import { AppointmentsTable } from "./AppointmentsTable";
+import { AppointmentsManager } from "./AppointmentsManager";
 
 export default async function AppointmentsPage() {
-  const [clinics, doctors, patients, appts] = await Promise.all([
-    prisma.clinic.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.doctor.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.patient.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  const [appts, clinics, doctors, patients] = await Promise.all([
     prisma.appointment.findMany({
-      orderBy: { startsAt: "desc" },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         startsAt: true,
@@ -19,27 +15,33 @@ export default async function AppointmentsPage() {
         patient: { select: { id: true, name: true } },
       },
     }),
+    prisma.clinic.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.doctor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const rows = appts.map(a => ({
     id: a.id,
-    startsAt: a.startsAt,
-    status: a.status as string,
+    clinicId: a.clinic?.id ?? "",
     clinicName: a.clinic?.name ?? "",
+    doctorId: a.doctor?.id ?? "",
     doctorName: a.doctor?.name ?? "",
+    patientId: a.patient?.id ?? "",
     patientName: a.patient?.name ?? "",
+    startsAtISO: a.startsAt?.toISOString() ?? "",
+    status: a.status,
   }));
 
   return (
     <div className="grid gap-6">
       <Card>
-        <CardTitle>Nova Consulta</CardTitle>
-        <NewAppointmentForm clinics={clinics} doctors={doctors} patients={patients} />
-      </Card>
-
-      <Card>
         <CardTitle>Consultas</CardTitle>
-        <AppointmentsTable data={rows} />
+        <AppointmentsManager
+          initialAppointments={rows}
+          clinics={clinics}
+          doctors={doctors}
+          patients={patients}
+        />
       </Card>
     </div>
   );

@@ -1,44 +1,43 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 
 type Row = {
     id: string;
-    startsAt: string | Date;
+    clinicId: string; clinicName: string;
+    doctorId: string; doctorName: string;
+    patientId: string; patientName: string;
+    startsAtISO: string;
     status: string;
-    clinicName: string;
-    doctorName: string;
-    patientName: string;
 };
 
-const norm = (v: unknown) =>
-    (v ?? "")
-        .toString()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "");
-
+const norm = (s: unknown) =>
+    (s ?? "").toString().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 const inc = (needle: string, hay: unknown) => norm(hay).includes(norm(needle));
 
-export function AppointmentsTable({ data }: { data: Row[] }) {
-    const [qDate, setQDate] = useState("");     // aceita "2025-08", "10/08", "14:00", etc.
+export function AppointmentsTable({ data, onEdit }: {
+    data: Row[];
+    onEdit: (row: Row) => void;
+}) {
     const [qClinic, setQClinic] = useState("");
     const [qDoctor, setQDoctor] = useState("");
     const [qPatient, setQPatient] = useState("");
+    const [qWhen, setQWhen] = useState("");
     const [qStatus, setQStatus] = useState("");
 
     const filtered = useMemo(() => {
-        return data.filter(r => {
-            const dateStr = new Date(r.startsAt).toLocaleString();
+        return data.filter(a => {
+            const when = a.startsAtISO ? new Date(a.startsAtISO).toLocaleString() : "";
             return (
-                (qDate.trim() === "" || inc(qDate, dateStr)) &&
-                (qClinic.trim() === "" || inc(qClinic, r.clinicName)) &&
-                (qDoctor.trim() === "" || inc(qDoctor, r.doctorName)) &&
-                (qPatient.trim() === "" || inc(qPatient, r.patientName)) &&
-                (qStatus.trim() === "" || inc(qStatus, r.status))
+                (qClinic === "" || inc(qClinic, a.clinicName)) &&
+                (qDoctor === "" || inc(qDoctor, a.doctorName)) &&
+                (qPatient === "" || inc(qPatient, a.patientName)) &&
+                (qWhen === "" || inc(qWhen, when)) &&
+                (qStatus === "" || inc(qStatus, a.status))
             );
         });
-    }, [data, qDate, qClinic, qDoctor, qPatient, qStatus]);
+    }, [data, qClinic, qDoctor, qPatient, qWhen, qStatus]);
 
     return (
         <div className="overflow-x-auto">
@@ -50,66 +49,37 @@ export function AppointmentsTable({ data }: { data: Row[] }) {
                         <th className="px-3 py-2">Médico</th>
                         <th className="px-3 py-2">Paciente</th>
                         <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2 w-16">Ações</th>
                     </tr>
                     <tr className="border-b bg-white">
-                        <th className="px-3 py-2">
-                            <input
-                                placeholder='Filtrar data… (ex: "2025-08", "10/08", "14:00")'
-                                value={qDate}
-                                onChange={(e) => setQDate(e.target.value)}
-                                className="w-full rounded border px-2 py-1"
-                            />
-                        </th>
-                        <th className="px-3 py-2">
-                            <input
-                                placeholder="Filtrar clínica…"
-                                value={qClinic}
-                                onChange={(e) => setQClinic(e.target.value)}
-                                className="w-full rounded border px-2 py-1"
-                            />
-                        </th>
-                        <th className="px-3 py-2">
-                            <input
-                                placeholder="Filtrar médico…"
-                                value={qDoctor}
-                                onChange={(e) => setQDoctor(e.target.value)}
-                                className="w-full rounded border px-2 py-1"
-                            />
-                        </th>
-                        <th className="px-3 py-2">
-                            <input
-                                placeholder="Filtrar paciente…"
-                                value={qPatient}
-                                onChange={(e) => setQPatient(e.target.value)}
-                                className="w-full rounded border px-2 py-1"
-                            />
-                        </th>
-                        <th className="px-3 py-2">
-                            <input
-                                placeholder='Filtrar status… (ex: "AGENDADA")'
-                                value={qStatus}
-                                onChange={(e) => setQStatus(e.target.value)}
-                                className="w-full rounded border px-2 py-1"
-                            />
-                        </th>
+                        <th className="px-3 py-2"><input className="w-full rounded border px-2 py-1" placeholder='Filtrar data… ex: "2025-08"' value={qWhen} onChange={e => setQWhen(e.target.value)} /></th>
+                        <th className="px-3 py-2"><input className="w-full rounded border px-2 py-1" placeholder="Filtrar clínica…" value={qClinic} onChange={e => setQClinic(e.target.value)} /></th>
+                        <th className="px-3 py-2"><input className="w-full rounded border px-2 py-1" placeholder="Filtrar médico…" value={qDoctor} onChange={e => setQDoctor(e.target.value)} /></th>
+                        <th className="px-3 py-2"><input className="w-full rounded border px-2 py-1" placeholder="Filtrar paciente…" value={qPatient} onChange={e => setQPatient(e.target.value)} /></th>
+                        <th className="px-3 py-2"><input className="w-full rounded border px-2 py-1" placeholder='Filtrar status… ex: "SCHEDULED"' value={qStatus} onChange={e => setQStatus(e.target.value)} /></th>
+                        <th />
                     </tr>
                 </thead>
-
                 <tbody>
                     {filtered.length === 0 ? (
-                        <tr>
-                            <td className="px-3 py-3 text-gray-500" colSpan={5}>
-                                Nenhum resultado para os filtros atuais.
-                            </td>
-                        </tr>
+                        <tr><td className="px-3 py-3 text-gray-500" colSpan={6}>Nenhum resultado.</td></tr>
                     ) : (
-                        filtered.map((r) => (
-                            <tr key={r.id} className="border-b">
-                                <td className="px-3 py-2">{new Date(r.startsAt).toLocaleString()}</td>
-                                <td className="px-3 py-2">{r.clinicName || "-"}</td>
-                                <td className="px-3 py-2">{r.doctorName || "-"}</td>
-                                <td className="px-3 py-2">{r.patientName || "-"}</td>
-                                <td className="px-3 py-2">{r.status}</td>
+                        filtered.map(a => (
+                            <tr key={a.id} className="border-b">
+                                <td className="px-3 py-2">{a.startsAtISO ? new Date(a.startsAtISO).toLocaleString() : "-"}</td>
+                                <td className="px-3 py-2">{a.clinicName || "-"}</td>
+                                <td className="px-3 py-2">{a.doctorName || "-"}</td>
+                                <td className="px-3 py-2">{a.patientName || "-"}</td>
+                                <td className="px-3 py-2">{a.status}</td>
+                                <td className="px-3 py-2">
+                                    <button
+                                        onClick={() => onEdit(a)}
+                                        title="Editar"
+                                        className="inline-flex items-center rounded border px-2 py-1 hover:bg-gray-50"
+                                    >
+                                        <PencilSquareIcon className="h-5 w-5" />
+                                    </button>
+                                </td>
                             </tr>
                         ))
                     )}

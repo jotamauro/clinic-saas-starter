@@ -13,6 +13,8 @@ export default function Header() {
             <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                     <nav className="flex flex-wrap gap-4 text-sm">
+                        {user?.role === "ADMIN" && <Link href="/users" className="text-sm font-semibold">Usuários</Link>}
+
                         <Link href="/dashboard" className="text-sm font-semibold">Dashboard</Link>
                         <Link href="/clinics" className="text-sm font-semibold">Clínicas</Link>
                         <Link href="/patients" className="text-sm font-semibold">Pacientes</Link>
@@ -20,6 +22,7 @@ export default function Header() {
                         <Link href="/contracts" className="text-sm font-semibold">Contratos</Link>
                         <Link href="/schedule" className="text-sm font-semibold">Agenda</Link>
                         <Link href="/appointments" className="text-sm font-semibold">Consultas</Link>
+
                     </nav>
                 </div>
 

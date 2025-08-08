@@ -60,7 +60,7 @@ export function UserAvatarMenu({ user }: { user: UserInfo }) {
                         <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-gray-900">{user?.name ?? "Usuário"}</p>
                             <p className="truncate text-xs text-gray-500">{user?.email ?? "—"}</p>
-                            {user?.role && <p className="truncate text-xs text-gray-500">Role: {user.role}</p>}
+                            {user?.role && <p className="truncate text-xs text-gray-500">Perfil: {user.role}</p>}
                         </div>
                     </div>
 

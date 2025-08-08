@@ -36,3 +36,5 @@ Login padrão: **admin@clinic.com / admin123**
 - `GET/POST /api/appointments`
 - `POST /api/checkin` (token ou code)
 # clinic-saas-starter
+
+

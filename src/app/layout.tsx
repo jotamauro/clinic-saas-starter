@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import AuthGuard from "@/components/layout/AuthGuard";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+
   return (
     <html lang="pt-BR">
       <body className="min-h-screen bg-gray-50">
