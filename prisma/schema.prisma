@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  clinics      Clinic[] @relation("ClinicAdmins")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  DOCTOR
+  RECEPTION
+}
+
+model Clinic {
+  id          String        @id @default(cuid())
+  name        String
+  document    String        @unique
+  phone       String?
+  address     String?
+  admins      User[]        @relation("ClinicAdmins")
+  doctors     Doctor[]
+  contracts   Contract[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  Appointment Appointment[]
+
+  @@map("clinics")
+}
+
+model Doctor {
+  id           String        @id @default(cuid())
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  name         String
+  crm          String        @unique
+  specialty    String
+  email        String?
+  phone        String?
+  contracts    Contract[]
+  slots        Slot[]
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("doctors")
+}
+
+model Contract {
+  id           String    @id @default(cuid())
+  clinicId     String
+  doctorId     String
+  clinic       Clinic    @relation(fields: [clinicId], references: [id])
+  doctor       Doctor    @relation(fields: [doctorId], references: [id])
+  startDate    DateTime
+  endDate      DateTime?
+  revenueShare Float
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([clinicId, doctorId], name: "uniq_clinic_doctor")
+  @@map("contracts")
+}
+
+model Slot {
+  id          String   @id @default(cuid())
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+  weekday     Int
+  startTime   String
+  endTime     String
+  durationMin Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("slots")
+}
+
+model Patient {
+  id           String        @id @default(cuid())
+  name         String
+  document     String?       @unique
+  email        String?
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+
+  @@map("patients")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  CHECKED_IN
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  clinicId     String
+  clinic       Clinic            @relation(fields: [clinicId], references: [id])
+  doctorId     String
+  doctor       Doctor            @relation(fields: [doctorId], references: [id])
+  patientId    String
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  startsAt     DateTime
+  endsAt       DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  checkinToken String?           @unique
+  checkinCode  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([doctorId, startsAt])
+  @@map("appointments")
+}
