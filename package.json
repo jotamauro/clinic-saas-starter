@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build --no-lint",
     "start": "next start",
-    "postinstall": "prisma generate",
-    "prisma:studio": "prisma studio",
-    "db:migrate": "prisma migrate dev",
+    "lint": "next lint",
+    "postinstall": "npm run prisma:push && npm run prisma:deploy && npm run prisma:generate",
+    "prisma:deploy": "prisma migrate deploy --schema=./prisma/schema/",
+    "prisma:generate": "prisma generate --schema=./prisma/schema/",
+    "prisma:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
